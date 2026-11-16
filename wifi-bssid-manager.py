@@ -43,71 +43,68 @@ def bssid_bytes(bssid):
 
 
 ICON_NAME = 'wifi-roam-toggle-custom'
+ICON_COLORS = {
+    'pinned': (184, 36, 51),     # Red: current connection is pinned
+    'automatic': (28, 79, 133), # Blue: current connection is not pinned
+    'disconnected': (91, 98, 108), # Gray: Wi-Fi is disconnected
+}
 
 
 def create_tray_icon():
-    """Draw a distinct Wi-Fi + orange location pin icon, with no image assets.
-
-    The icon is generated in a private temporary directory for the life of
-    the application and registered as an additional AppIndicator icon path.
-    """
+    """Generate red, blue and gray variants of the tray icon at startup."""
     size = 64
     scale = 3
     n = size * scale
-    pixels = bytearray(size * size * 4)
+    # Generate separate icon files because AppIndicator uses icon names, not pixbufs.
+    runtime = os.environ.get('XDG_RUNTIME_DIR')
+    directory = tempfile.mkdtemp(prefix='wifi-bssid-manager-', dir=runtime if runtime and
+                                 os.path.isdir(runtime) else None)
 
-    def sample(x, y):
-        # Transparent outside the dark circular background.
-        if (x - 32) ** 2 + (y - 32) ** 2 > 29 ** 2:
-            return (0, 0, 0, 0)
-        color = (28, 43, 65, 255)
-
-        # Wi-Fi waves: white upper semicircular arcs.
-        dx, dy = x - 32, y - 37
-        radius = math.hypot(dx, dy)
-        angle = math.degrees(math.atan2(dy, dx)) % 360
-        if 202 <= angle <= 338 and (abs(radius - 20) < 2.2 or abs(radius - 12) < 2.2):
-            color = (246, 249, 255, 255)
-        if dx * dx + (y - 34) ** 2 < 2.9 ** 2:
-            color = (246, 249, 255, 255)
-
-        # Orange map-pin silhouette, below the Wi-Fi symbol.
-        pin_circle = (x - 32) ** 2 + (y - 43) ** 2 < 7.4 ** 2
-        pin_tip = 43 <= y <= 56 and abs(x - 32) <= 7.4 * (56 - y) / 13
-        if pin_circle or pin_tip:
-            color = (255, 177, 49, 255)
-        if (x - 32) ** 2 + (y - 42) ** 2 < 3.2 ** 2:
-            color = (28, 43, 65, 255)
-        return color
-
-    for py in range(size):
-        for px in range(size):
-            channels = [0, 0, 0, 0]
-            for sy in range(scale):
-                for sx in range(scale):
-                    rgba = sample(px + (sx + .5) / scale, py + (sy + .5) / scale)
-                    for k in range(4):
-                        channels[k] += rgba[k]
-            offset = (py * size + px) * 4
-            pixels[offset:offset + 4] = bytes(c // (scale * scale) for c in channels)
-
-    # Encode RGBA PNG with standard library only.
     def chunk(kind, payload):
         return (struct.pack('!I', len(payload)) + kind + payload +
                 struct.pack('!I', zlib.crc32(kind + payload) & 0xffffffff))
 
-    scanlines = b''.join(b'\x00' + bytes(pixels[y * size * 4:(y + 1) * size * 4])
-                         for y in range(size))
-    png = (b'\x89PNG\r\n\x1a\n' +
-           chunk(b'IHDR', struct.pack('!2I5B', size, size, 8, 6, 0, 0, 0)) +
-           chunk(b'IDAT', zlib.compress(scanlines, 9)) +
-           chunk(b'IEND', b''))
-    runtime = os.environ.get('XDG_RUNTIME_DIR')
-    directory = tempfile.mkdtemp(prefix='wifi-roam-toggle-', dir=runtime if runtime and
-                                 os.path.isdir(runtime) else None)
-    image_path = os.path.join(directory, ICON_NAME + '.png')
-    with open(image_path, 'wb') as file:
-        file.write(png)
+    for state, background in ICON_COLORS.items():
+        pixels = bytearray(size * size * 4)
+
+        def sample(x, y):
+            if (x - 32) ** 2 + (y - 32) ** 2 > 29 ** 2:
+                return (0, 0, 0, 0)
+            color = (*background, 255)
+            dx, dy = x - 32, y - 37
+            radius = math.hypot(dx, dy)
+            angle = math.degrees(math.atan2(dy, dx)) % 360
+            if 202 <= angle <= 338 and (abs(radius - 20) < 2.2 or abs(radius - 12) < 2.2):
+                color = (246, 249, 255, 255)
+            if dx * dx + (y - 34) ** 2 < 2.9 ** 2:
+                color = (246, 249, 255, 255)
+            pin_circle = (x - 32) ** 2 + (y - 43) ** 2 < 7.4 ** 2
+            pin_tip = 43 <= y <= 56 and abs(x - 32) <= 7.4 * (56 - y) / 13
+            if pin_circle or pin_tip:
+                color = (255, 177, 49, 255)
+            if (x - 32) ** 2 + (y - 42) ** 2 < 3.2 ** 2:
+                color = (*background, 255)
+            return color
+
+        for py in range(size):
+            for px in range(size):
+                channels = [0, 0, 0, 0]
+                for sy in range(scale):
+                    for sx in range(scale):
+                        rgba = sample(px + (sx + .5) / scale, py + (sy + .5) / scale)
+                        for k in range(4):
+                            channels[k] += rgba[k]
+                offset = (py * size + px) * 4
+                pixels[offset:offset + 4] = bytes(c // (scale * scale) for c in channels)
+
+        scanlines = b''.join(b'\x00' + bytes(pixels[y * size * 4:(y + 1) * size * 4])
+                             for y in range(size))
+        png = (b'\x89PNG\r\n\x1a\n' +
+               chunk(b'IHDR', struct.pack('!2I5B', size, size, 8, 6, 0, 0, 0)) +
+               chunk(b'IDAT', zlib.compress(scanlines, 9)) +
+               chunk(b'IEND', b''))
+        with open(os.path.join(directory, f'{ICON_NAME}-{state}.png'), 'wb') as file:
+            file.write(png)
     return directory
 
 
@@ -128,7 +125,8 @@ class Tray:
         self.indicator = Indicator.Indicator.new_with_path(
             'wifi-roam-toggle', ICON_NAME,
             Indicator.IndicatorCategory.SYSTEM_SERVICES, self.icon_dir)
-        self.indicator.set_icon_full(ICON_NAME, 'Wi-Fi BSSID固定ツール')
+        self.icon_state = None
+        self.update_icon('disconnected')
         self.indicator.set_status(Indicator.IndicatorStatus.ACTIVE)
         # Indicator label is intentionally unused: some trays concatenate labels
         # on each refresh, creating repeated '固定設定: 1件' text.
@@ -159,6 +157,15 @@ class Tray:
                                      dbus_interface=DBUS, arg0=NM)
         self.refresh()
 
+
+    def update_icon(self, state):
+        if state == self.icon_state:
+            return
+        self.icon_state = state
+        self.indicator.set_icon_full(f'{ICON_NAME}-{state}',
+                                     {'pinned': 'BSSID固定中',
+                                      'automatic': '自動ローミング',
+                                      'disconnected': 'Wi-Fi未接続'}[state])
 
     def proxy(self, path):
         return self.bus.get_object(NM, str(path))
@@ -249,6 +256,7 @@ class Tray:
             state = self.current
             if state:
                 same = state['saved'].lower() == state['bssid'].lower()
+                self.update_icon('pinned' if same else 'automatic')
                 if same:
                     self.pin_item.set_label(
                         f"AP({state['ssid']})は固定BSSID({state['bssid']})に接続しています")
@@ -259,12 +267,14 @@ class Tray:
                     self.pin_item.set_sensitive(not self.busy and
                                                 bool(BSSID_PATTERN.fullmatch(state['bssid'])))
             else:
+                self.update_icon('disconnected')
                 self.pin_item.set_label('現在の接続先(未接続)のBSSIDを固定化する')
                 self.pin_item.set_sensitive(False)
             self.clear_item.set_sensitive(bool(pinned) and not self.busy)
             # Menu labels are derived from current state.
         except Exception as exc:
             self.current = None
+            self.update_icon('disconnected')
             self.pin_item.set_sensitive(False)
             self.clear_item.set_sensitive(False)
             print(f'wifi-bssid-manager: {exc}', file=sys.stderr)
