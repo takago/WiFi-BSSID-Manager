@@ -51,15 +51,68 @@ sudo apt install gnome-shell-extension-appindicator
 ```bash
 git clone https://github.com/takago/WiFi-BSSID-Manager.git
 cd WiFi-BSSID-Manager
-/usr/bin/python3 wifi-roam-toggle.py
+/usr/bin/python3 wifi-bssid-manager.py
 ```
 
 上記GitHub URLは**公開予定のリポジトリ名**を前提としています．リポジトリを作成した後に利用してください．
 
+### `/usr/local/bin`へインストールする場合
+
+リポジトリのディレクトリで実行権限を付与し，コマンド名`wifi-bssid-manager`で配置できます．
+
+```bash
+chmod +x wifi-bssid-manager.py
+sudo install -m 755 wifi-bssid-manager.py /usr/local/bin/wifi-bssid-manager
+```
+
+これ以降は作業ディレクトリに関係なく，次のコマンドで起動できます．Wi-Fiインターフェースは自動検出されます．
+
+```bash
+wifi-bssid-manager
+```
+
+`/usr/local/bin`への配置後も，Python関連の依存パッケージは上記の手順でインストールする必要があります．このアプリ自体は管理者権限で起動しないでください．NetworkManagerへの設定変更は，ログインユーザーのD-Busセッションと権限で実行します．
+
+最新版に更新するときは，リポジトリで`git pull`を実行してから，再度`sudo install -m 755 ...`を実行してください．実行中の旧アプリは終了してから起動し直します．
+
+```bash
+git pull
+sudo install -m 755 wifi-bssid-manager.py /usr/local/bin/wifi-bssid-manager
+```
+
+アンインストールする場合は，配置した実行ファイルだけを削除します．NetworkManagerに保存されたBSSID固定設定は変更されません．
+
+```bash
+sudo rm /usr/local/bin/wifi-bssid-manager
+```
+
+### ログイン時に自動起動する（Ubuntu Desktop）
+
+`/usr/local/bin/wifi-bssid-manager`へのインストール後，ユーザーごとの自動起動設定を登録できます．リポジトリに同梱した`wifi-bssid-manager.desktop`を使用します．
+
+```bash
+mkdir -p ~/.config/autostart
+install -m 644 wifi-bssid-manager.desktop ~/.config/autostart/
+```
+
+次回の**デスクトップへのログイン時**から，システムトレイに自動起動します．登録直後に試す場合は，現在のトレイアプリが起動していないことを確認してから次を実行してください．
+
+```bash
+wifi-bssid-manager
+```
+
+自動起動を無効化する場合は，次のファイルを削除します．
+
+```bash
+rm ~/.config/autostart/wifi-bssid-manager.desktop
+```
+
+この設定はユーザー単位です．`sudo`を使って`~/.config/autostart/`に配置しないでください．また，`.desktop`内の`Exec`は`/usr/local/bin/wifi-bssid-manager`を指定しているため，**先に上記のコマンドで本体をインストール**してください．これはGUIログイン時の自動起動であり，OS起動時にバックグラウンドサービスとして動作するものではありません．GNOMEではAppIndicator拡張機能が必要な場合があります．
+
 Wi-Fiインターフェースを明示する場合は，次のように指定できます．
 
 ```bash
-/usr/bin/python3 wifi-roam-toggle.py wlp6s0
+/usr/bin/python3 wifi-bssid-manager.py wlp6s0
 ```
 
 ## 使い方
