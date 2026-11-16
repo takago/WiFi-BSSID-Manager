@@ -249,10 +249,15 @@ class Tray:
             state = self.current
             if state:
                 same = state['saved'].lower() == state['bssid'].lower()
-                self.pin_item.set_label(
-                    f"現在の接続先({state['ssid']})のBSSID({state['bssid']})を固定化して，Wi-Fiを再接続する")
-                self.pin_item.set_sensitive(not self.busy and not same and
-                                            bool(BSSID_PATTERN.fullmatch(state['bssid'])))
+                if same:
+                    self.pin_item.set_label(
+                        f"AP({state['ssid']})はBSSID({state['bssid']})に接続しています")
+                    self.pin_item.set_sensitive(False)
+                else:
+                    self.pin_item.set_label(
+                        f"現在の接続先({state['ssid']})のBSSID({state['bssid']})を固定化して，Wi-Fiを再接続する")
+                    self.pin_item.set_sensitive(not self.busy and
+                                                bool(BSSID_PATTERN.fullmatch(state['bssid'])))
             else:
                 self.pin_item.set_label('現在の接続先(未接続)のBSSIDを固定化する')
                 self.pin_item.set_sensitive(False)

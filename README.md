@@ -34,111 +34,83 @@ Ubuntu Desktopでの利用を想定しています．その他のディストリ
 
 ## インストール（Ubuntu）
 
+依存パッケージをインストールします．
+
 ```bash
 sudo apt update
-sudo apt install python3-gi python3-dbus gir1.2-gtk-3.0 \
+sudo apt install make python3-gi python3-dbus gir1.2-gtk-3.0 \
   gir1.2-ayatanaappindicator3-0.1 network-manager
 ```
 
-GNOMEでトレイアイコンが表示されない場合は，AppIndicator対応のシェル拡張機能を確認してください．Ubuntuでは，必要に応じて次を導入します．
+GNOMEでトレイアイコンが表示されない場合は，AppIndicator拡張機能を確認してください．
 
 ```bash
 sudo apt install gnome-shell-extension-appindicator
 ```
 
-リポジトリを取得して起動します．
+GitHubに公開後は，次のように取得してインストールできます．
 
 ```bash
 git clone https://github.com/takago/WiFi-BSSID-Manager.git
 cd WiFi-BSSID-Manager
-/usr/bin/python3 wifi-bssid-manager.py
+make install
 ```
 
-上記GitHub URLは**公開予定のリポジトリ名**を前提としています．リポジトリを作成した後に利用してください．
+`make install`はスクリプトを`/usr/local/bin/wifi-bssid-manager`へ，アイコンを`/usr/local/share/icons/hicolor/64x64/apps/`へ，メニュー登録用`.desktop`を`~/.local/share/applications/`へ配置します．システム領域へのコピーのみ`sudo`を使います．**`sudo make install`ではなく，通常のユーザーで`make install`を実行してください．**
 
-### `/usr/local/bin`へインストールする場合
+GitHubリポジトリが未公開の場合は，配布ZIPを展開して同じコマンドを実行できます．
 
-リポジトリのディレクトリで実行権限を付与し，コマンド名`wifi-bssid-manager`で配置できます．
-
-```bash
-chmod +x wifi-bssid-manager.py
-sudo install -m 755 wifi-bssid-manager.py /usr/local/bin/wifi-bssid-manager
-```
-
-これ以降は作業ディレクトリに関係なく，次のコマンドで起動できます．Wi-Fiインターフェースは自動検出されます．
+起動コマンド：
 
 ```bash
 wifi-bssid-manager
 ```
 
-`/usr/local/bin`への配置後も，Python関連の依存パッケージは上記の手順でインストールする必要があります．このアプリ自体は管理者権限で起動しないでください．NetworkManagerへの設定変更は，ログインユーザーのD-Busセッションと権限で実行します．
+### ログイン時に自動起動
 
-最新版に更新するときは，リポジトリで`git pull`を実行してから，再度`sudo install -m 755 ...`を実行してください．実行中の旧アプリは終了してから起動し直します．
+インストール後，ログイン時の自動起動を有効化できます．
+
+```bash
+make autostart
+```
+
+自動起動を解除する場合：
+
+```bash
+make no-autostart
+```
+
+自動起動はオプションです．`make install`だけでは有効になりません．デスクトップログイン時に起動する仕組みであり，systemdのシステムサービスは追加しません．
+
+### 更新・アンインストール
 
 ```bash
 git pull
-sudo install -m 755 wifi-bssid-manager.py /usr/local/bin/wifi-bssid-manager
+make install
 ```
 
-本体をアンインストールする場合は，以下のコマンドを実行します．アプリケーションメニューと自動起動の登録も上記の手順で削除してください．NetworkManagerに保存されたBSSID固定設定は変更されません．
+実行中の旧アプリは終了してから起動し直してください．
+
+アンインストール：
 
 ```bash
-sudo rm /usr/local/bin/wifi-bssid-manager
+make uninstall
 ```
 
-### アプリケーションメニューに登録する（Ubuntu Desktop）
+本体，メニュー登録，アイコン，自動起動登録を削除します．NetworkManagerの接続プロファイルは変更しません．
 
-本体を`/usr/local/bin/wifi-bssid-manager`へインストールした後，専用アイコンと`.desktop`ファイルを配置します．
+### 手動起動・インターフェース指定
+
+リポジトリ内のソースを直接実行する場合：
 
 ```bash
-sudo install -D -m 644 wifi-bssid-manager.png \
-  /usr/local/share/icons/hicolor/64x64/apps/wifi-bssid-manager.png
-mkdir -p ~/.local/share/applications
-install -m 644 wifi-bssid-manager.desktop \
-  ~/.local/share/applications/wifi-bssid-manager.desktop
+/usr/bin/python3 wifi-bssid-manager.py
 ```
 
-これでGNOMEの「アプリを表示」などから**WiFi BSSID Manager**を検索して起動できます．アプリを開くとトレイに常駐します．メニューへの登録自体は自動起動を有効にしません．
-
-メニュー登録を削除する場合は，次を実行します．
+Wi-Fiインターフェースを指定する場合：
 
 ```bash
-rm ~/.local/share/applications/wifi-bssid-manager.desktop
-```
-
-専用アイコンも使わなくなった場合に限り，次のコマンドで削除できます．自動起動用`.desktop`ファイルも同じアイコンを参照しているため，継続利用する場合は削除しないでください．
-
-```bash
-sudo rm /usr/local/share/icons/hicolor/64x64/apps/wifi-bssid-manager.png
-```
-
-### ログイン時に自動起動する（Ubuntu Desktop）
-
-`/usr/local/bin/wifi-bssid-manager`へのインストール後，ユーザーごとの自動起動設定を登録できます．専用アイコンは上記のメニュー登録手順で配置してください．リポジトリに同梱した`wifi-bssid-manager.desktop`を使用します．
-
-```bash
-mkdir -p ~/.config/autostart
-install -m 644 wifi-bssid-manager.desktop ~/.config/autostart/
-```
-
-次回の**デスクトップへのログイン時**から，システムトレイに自動起動します．登録直後に試す場合は，現在のトレイアプリが起動していないことを確認してから次を実行してください．
-
-```bash
-wifi-bssid-manager
-```
-
-自動起動を無効化する場合は，次のファイルを削除します．
-
-```bash
-rm ~/.config/autostart/wifi-bssid-manager.desktop
-```
-
-この設定はユーザー単位です．`sudo`を使って`~/.config/autostart/`に配置しないでください．また，`.desktop`内の`Exec`は`/usr/local/bin/wifi-bssid-manager`を指定しているため，**先に上記のコマンドで本体をインストール**してください．これはGUIログイン時の自動起動であり，OS起動時にバックグラウンドサービスとして動作するものではありません．GNOMEではAppIndicator拡張機能が必要な場合があります．
-
-Wi-Fiインターフェースを明示する場合は，次のように指定できます．
-
-```bash
-/usr/bin/python3 wifi-bssid-manager.py wlp6s0
+wifi-bssid-manager wlp6s0
 ```
 
 ## 使い方
@@ -149,7 +121,7 @@ Wi-Fiインターフェースを明示する場合は，次のように指定で
 2. **現在の接続先（SSID）のBSSID（MACアドレス）を固定化して，Wi-Fiを再接続する**
 3. **終了**
 
-固定操作はWi-Fi接続中にのみ利用できます．すでにそのBSSIDに固定されている場合は選択できません．一括解除は未接続でも利用できますが，固定指定が一つもない場合は無効になります．
+固定操作はWi-Fi接続中にのみ利用できます．すでにそのBSSIDに固定されている場合は「AP(SSID)はBSSID(MACアドレス)に接続しています」と表示し，その項目は選択できません．一括解除は未接続でも利用できますが，固定指定が一つもない場合は無効になります．
 
 操作時に確認ダイアログは出ません．対象Wi-Fi接続の再接続によって，通信が一時的に途切れます．NetworkManagerサービス自体を再起動するわけではありません．
 
