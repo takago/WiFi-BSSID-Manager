@@ -53,10 +53,10 @@ GitHubに公開後は，次のように取得してインストールできま�
 ```bash
 git clone https://github.com/takago/WiFi-BSSID-Manager.git
 cd WiFi-BSSID-Manager
-make install
+sudo make install
 ```
 
-`make install`はスクリプトを`/usr/local/bin/wifi-bssid-manager`へ，アイコンを`/usr/local/share/icons/hicolor/64x64/apps/`へ，メニュー登録用`.desktop`を`~/.local/share/applications/`へ配置します．システム領域へのコピーのみ`sudo`を使います．**`sudo make install`ではなく，通常のユーザーで`make install`を実行してください．**
+`sudo make install`はスクリプトを`/usr/local/bin/wifi-bssid-manager`へ，アイコンを`/usr/local/share/icons/hicolor/64x64/apps/`へ，アプリケーションメニュー登録用`.desktop`を`/usr/local/share/applications/`へ配置します．これらはシステム共通の設定です．
 
 GitHubリポジトリが未公開の場合は，配布ZIPを展開して同じコマンドを実行できます．
 
@@ -66,7 +66,7 @@ GitHubリポジトリが未公開の場合は，配布ZIPを展開して同じ�
 wifi-bssid-manager
 ```
 
-### ログイン時に自動起動
+### ログイン時に自動起動（個人設定）
 
 インストール後，ログイン時の自動起動を有効化できます．
 
@@ -80,13 +80,13 @@ make autostart
 make no-autostart
 ```
 
-自動起動はオプションです．`make install`だけでは有効になりません．デスクトップログイン時に起動する仕組みであり，systemdのシステムサービスは追加しません．
+自動起動はオプションです．`sudo make install`だけでは有効になりません．**`make autostart`と`make no-autostart`にはsudoを付けないでください**．デスクトップログイン時に起動する仕組みであり，systemdのシステムサービスは追加しません．
 
 ### 更新・アンインストール
 
 ```bash
 git pull
-make install
+sudo make install
 ```
 
 実行中の旧アプリは終了してから起動し直してください．
@@ -94,10 +94,16 @@ make install
 アンインストール：
 
 ```bash
-make uninstall
+sudo make uninstall
 ```
 
-本体，メニュー登録，アイコン，自動起動登録を削除します．NetworkManagerの接続プロファイルは変更しません．
+本体，メニュー登録，アイコンをシステムから削除します．個人用の自動起動設定は別管理なので，解除する場合は**一般ユーザー**として次を実行します．
+
+```bash
+make no-autostart
+```
+
+NetworkManagerの接続プロファイルは変更しません．
 
 ### 手動起動・インターフェース指定
 
@@ -121,7 +127,7 @@ wifi-bssid-manager wlp6s0
 2. **現在の接続先（SSID）のBSSID（MACアドレス）を固定化して，Wi-Fiを再接続する**
 3. **終了**
 
-固定操作はWi-Fi接続中にのみ利用できます．すでにそのBSSIDに固定されている場合は「AP(SSID)はBSSID(MACアドレス)に接続しています」と表示し，その項目は選択できません．一括解除は未接続でも利用できますが，固定指定が一つもない場合は無効になります．
+固定操作はWi-Fi接続中にのみ利用できます．すでにそのBSSIDに固定されている場合は「AP(SSID)は固定BSSID(MACアドレス)に接続しています」と表示し，その項目は選択できません．一括解除は未接続でも利用できますが，固定指定が一つもない場合は無効になります．
 
 操作時に確認ダイアログは出ません．対象Wi-Fi接続の再接続によって，通信が一時的に途切れます．NetworkManagerサービス自体を再起動するわけではありません．
 
@@ -139,6 +145,25 @@ MACアドレスが表示されれば固定設定が保存されています．�
 iw dev wlp6s0 link
 ```
 
+## ローミング・切断のログを監視する（参考）
+
+Wi-Fiが不安定な場合は，別の端末で次のコマンドを実行すると，`wpa_supplicant`が出力する認証・接続・切断イベントをリアルタイムに確認できます．
+
+```bash
+sudo journalctl -fu wpa_supplicant | \
+  grep --line-buffered -E 'Trying to (authenticate|associate)|CTRL-EVENT-CONNECTED|CTRL-EVENT-DISCONNECTED'
+```
+
+異なるBSSIDへの接続が連続して表示される場合は，AP間の切り替えが発生している可能性があります．切断時の`reason`や`locally_generated`も原因調査の参考になります．ただし，このログだけで切断原因やローミングの良否を断定することはできません．
+
+現在接続しているAPのBSSIDを確認するには，次のコマンドも使用できます（インターフェース名は適宜置き換えてください）．
+
+```bash
+watch -n 1 'iw dev wlp6s0 link | head -n 3'
+```
+
+`journalctl`の監視は`Ctrl+C`で終了できます．環境によっては，`wpa_supplicant`ではなく`iwd`がWi-Fi認証を管理している場合があり，その場合は上記ログが出力されません．
+
 ## 設計上の注意点
 
 - 設定はNetworkManagerのD-Bus API（`ListConnections()`，`GetSettings()`，`Update2()`）で読み書きします．
@@ -155,3 +180,14 @@ iw dev wlp6s0 link
 ## ライセンス
 
 ライセンスは公開時に決定してください．オープンソースとして配布する場合は，MIT Licenseなどを候補にできます．
+
+### Makefileの権限分離
+
+| コマンド | 権限 | 対象 |
+| --- | --- | --- |
+| `sudo make install` | 管理者 | 本体，アイコン，システム共通アプリケーションメニュー |
+| `sudo make uninstall` | 管理者 | 上記のシステム共通ファイルを削除 |
+| `make autostart` | 一般ユーザー | `~/.config/autostart/`に登録 |
+| `make no-autostart` | 一般ユーザー | 自分の自動起動登録を解除 |
+
+個人用自動起動は，実際にログインするユーザーで設定してください．`sudo make autostart`ではrootユーザーの設定先を変更してしまう場合があります．

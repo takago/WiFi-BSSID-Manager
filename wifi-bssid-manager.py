@@ -251,7 +251,7 @@ class Tray:
                 same = state['saved'].lower() == state['bssid'].lower()
                 if same:
                     self.pin_item.set_label(
-                        f"AP({state['ssid']})はBSSID({state['bssid']})に接続しています")
+                        f"AP({state['ssid']})は固定BSSID({state['bssid']})に接続しています")
                     self.pin_item.set_sensitive(False)
                 else:
                     self.pin_item.set_label(
