@@ -13,7 +13,7 @@ A lightweight Linux system tray utility for managing Wi-Fi BSSID pinning through
 - **未接続でも復旧可能**：固定先APの圏外に移動しても，保存済みのBSSID制限を解除できます．
 - **Wi-Fiインターフェース自動検出**：通常はコマンドライン引数が不要です．
 - **D-Bus APIを使用**：`nmcli`や`iw`の定期実行に依存しません．
-- **独自のトレイアイコン**：実行時にPython標準ライブラリで画像を生成します．外部PNG画像やPillowは不要です．
+- **独自のトレイアイコン**：実行時にPython標準ライブラリで画像を生成します．Pillowは不要です．アプリケーションメニュー用には同じデザインのPNGを同梱しています．
 
 ## 動作のイメージ
 
@@ -80,15 +80,41 @@ git pull
 sudo install -m 755 wifi-bssid-manager.py /usr/local/bin/wifi-bssid-manager
 ```
 
-アンインストールする場合は，配置した実行ファイルだけを削除します．NetworkManagerに保存されたBSSID固定設定は変更されません．
+本体をアンインストールする場合は，以下のコマンドを実行します．アプリケーションメニューと自動起動の登録も上記の手順で削除してください．NetworkManagerに保存されたBSSID固定設定は変更されません．
 
 ```bash
 sudo rm /usr/local/bin/wifi-bssid-manager
 ```
 
+### アプリケーションメニューに登録する（Ubuntu Desktop）
+
+本体を`/usr/local/bin/wifi-bssid-manager`へインストールした後，専用アイコンと`.desktop`ファイルを配置します．
+
+```bash
+sudo install -D -m 644 wifi-bssid-manager.png \
+  /usr/local/share/icons/hicolor/64x64/apps/wifi-bssid-manager.png
+mkdir -p ~/.local/share/applications
+install -m 644 wifi-bssid-manager.desktop \
+  ~/.local/share/applications/wifi-bssid-manager.desktop
+```
+
+これでGNOMEの「アプリを表示」などから**WiFi BSSID Manager**を検索して起動できます．アプリを開くとトレイに常駐します．メニューへの登録自体は自動起動を有効にしません．
+
+メニュー登録を削除する場合は，次を実行します．
+
+```bash
+rm ~/.local/share/applications/wifi-bssid-manager.desktop
+```
+
+専用アイコンも使わなくなった場合に限り，次のコマンドで削除できます．自動起動用`.desktop`ファイルも同じアイコンを参照しているため，継続利用する場合は削除しないでください．
+
+```bash
+sudo rm /usr/local/share/icons/hicolor/64x64/apps/wifi-bssid-manager.png
+```
+
 ### ログイン時に自動起動する（Ubuntu Desktop）
 
-`/usr/local/bin/wifi-bssid-manager`へのインストール後，ユーザーごとの自動起動設定を登録できます．リポジトリに同梱した`wifi-bssid-manager.desktop`を使用します．
+`/usr/local/bin/wifi-bssid-manager`へのインストール後，ユーザーごとの自動起動設定を登録できます．専用アイコンは上記のメニュー登録手順で配置してください．リポジトリに同梱した`wifi-bssid-manager.desktop`を使用します．
 
 ```bash
 mkdir -p ~/.config/autostart

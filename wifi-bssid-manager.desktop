@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=WiFi BSSID Manager
-Comment=Pin the current Wi-Fi BSSID or clear saved BSSID restrictions
+Comment=Manage Wi-Fi BSSID pinning using NetworkManager
 Exec=/usr/local/bin/wifi-bssid-manager
-Icon=network-wireless
+Icon=/usr/local/share/icons/hicolor/64x64/apps/wifi-bssid-manager.png
 Terminal=false
 Categories=Network;Utility;
-X-GNOME-Autostart-enabled=true
+StartupNotify=false
